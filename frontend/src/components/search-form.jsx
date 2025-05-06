@@ -1,0 +1,366 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { CalendarIcon, Loader2, MapPin, Search } from "lucide-react";
+import { cn, formatDate } from "@/lib/utils";
+import { searchLocations } from "@/utils/amadeusAPI";
+import { countries } from "@/lib/countries-data";
+
+export function SearchForm({ compact = false, fromAirport = "", toAirport= "" }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [fromQuery, setFromQuery] = useState(fromAirport);
+  const [toQuery, setToQuery] = useState(toAirport);
+  const [fromAirports, setFromAirports] = useState([]);
+  const [toAirports, setToAirports] = useState([]);
+  const [fromLoading, setFromLoading] = useState(false);
+  const [toLoading, setToLoading] = useState(false);
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
+
+  const [from, setFrom] = useState(searchParams.get("from") || "");
+  const [to, setTo] = useState(searchParams.get("to") || "");
+  const [date, setDate] = useState(
+    searchParams.get("date") ? new Date(searchParams.get("date")) : new Date()
+  );
+  const [passengers, setPassengers] = useState(
+    searchParams.get("passengers") || "1"
+  );
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const [countryCode, setCountryCode] = useState("IN");
+  const [countryOpen, setCountryOpen] = useState(false);
+
+  const handleFromAirportSearch = async () => {
+    if (fromQuery.length < 2) {
+      setFromAirports([]);
+      return;
+    }
+
+    setFromLoading(true);
+    try {
+      const airports = await searchLocations({
+        keyword: fromQuery,
+        countryCode,
+      });
+      setFromAirports(airports.data);
+    } catch (error) {
+      console.error("Error fetching airports:", error);
+    } finally {
+      setFromLoading(false);
+    }
+  };
+
+  const handleToAirportSearch = async () => {
+    if (toQuery.length < 2) {
+      setToAirports([]);
+      return;
+    }
+
+    setToLoading(true);
+    try {
+      const airports = await searchLocations({
+        keyword: toQuery,
+        countryCode,
+      });
+      setToAirports(airports.data);
+    } catch (error) {
+      console.error("Error fetching airports:", error);
+    } finally {
+      setToLoading(false);
+    }
+  };
+
+  console.log(date, "date");
+  
+  const handleSearch = (e) => {
+    e.preventDefault();
+
+    if (!from || !to || !date) return;
+
+    const formattedDate = formatDate(date);
+
+    router.push(
+      `/search?from=${from}&to=${to}&date=${formattedDate}&passengers=${passengers}`
+    );
+  };
+
+  return (
+    <form
+      onSubmit={handleSearch}
+      className={cn(
+        "grid gap-4",
+        compact
+          ? "grid-cols-1 md:grid-cols-5"
+          : "grid-cols-1 md:grid-cols-2 lg:grid-cols-5"
+      )}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="country">Country</Label>
+        <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={countryOpen}
+              className="w-full justify-between"
+            >
+              {countryCode
+                ? `${countryCode} - ${
+                    countries.find((c) => c.code === countryCode)?.name || ""
+                  }`
+                : "Select country..."}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="ml-2 h-4 w-4 shrink-0 opacity-50"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0">
+            <Command>
+              <CommandInput placeholder="Search country..." />
+              <CommandList>
+                <CommandEmpty>No country found.</CommandEmpty>
+                <CommandGroup>
+                  {countries.map((country) => (
+                    <CommandItem
+                      key={country.code}
+                      value={country.code}
+                      onSelect={(currentValue) => {
+                        setCountryCode(currentValue);
+                        setCountryOpen(false);
+                      }}
+                    >
+                      {country.code} - {country.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div
+        className={cn(
+          "space-y-2",
+          compact ? "md:col-span-2" : "md:col-span-2 lg:col-span-1"
+        )}
+      >
+        <Label htmlFor="from">From</Label>
+        <Popover open={fromOpen} onOpenChange={setFromOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="from"
+                placeholder="City or Airport"
+                value={fromQuery}
+                onChange={(e) => setFromQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="p-0" align="start">
+            <Command>
+              <div className="flex items-center justify-between p-2 gap-2">
+                <Input
+                  placeholder="Search city..."
+                  value={fromQuery}
+                  onChange={(e) => setFromQuery(e.target.value)}
+                />
+                <Button onClick={handleFromAirportSearch}>
+                  <Search />
+                </Button>
+              </div>
+              <CommandList>
+                {fromLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Searching airports...</span>
+                  </div>
+                ) : (
+                  <>
+                    <CommandEmpty>No airports found.</CommandEmpty>
+                    <CommandGroup>
+                      {fromAirports.map((airport) => (
+                        <CommandItem
+                          key={airport.id}
+                          onSelect={() => {
+                            setFrom(airport.name);
+                            setFromQuery(airport.name);
+                            setFromOpen(false);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span>{airport.name}</span>
+                            <span className="text-xs text-gray-500">
+                              {airport.address.cityName},{" "}
+                              {airport.address.stateCode}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div
+        className={cn(
+          "space-y-2",
+          compact ? "md:col-span-2" : "md:col-span-2 lg:col-span-1"
+        )}
+      >
+        <Label htmlFor="to">To</Label>
+        <Popover open={toOpen} onOpenChange={setToOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="to"
+                placeholder="City or Airport"
+                value={toQuery}
+                onChange={(e) => setToQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="p-0" align="start">
+            <Command>
+              <div className="flex items-center justify-between p-2 gap-2">
+                <Input
+                  placeholder="Search city..."
+                  value={toQuery}
+                  onChange={(e) => setToQuery(e.target.value)}
+                />
+                <Button onClick={handleToAirportSearch}>
+                  <Search />
+                </Button>
+              </div>
+              <CommandList>
+                {toLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Searching airports...</span>
+                  </div>
+                ) : (
+                  <>
+                    <CommandEmpty>No airports found.</CommandEmpty>
+                    <CommandGroup>
+                      {toAirports.map((airport) => (
+                        <CommandItem
+                          key={airport.id}
+                          onSelect={() => {
+                            setTo(airport.name);
+                            setToQuery(airport.name);
+                            setToOpen(false);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span>{airport.name}</span>
+                            <span className="text-xs text-gray-500">
+                              {airport.address.cityName}, {airport.address.stateCode}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="date">Departure Date</Label>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date ? formatDate(date) : "Select date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={(date) => {
+                setDate(date);
+                setCalendarOpen(false);
+              }}
+              initialFocus
+              disabled={(date) =>
+                date < new Date(new Date().setHours(0, 0, 0, 0))
+              }
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="passengers">Passengers</Label>
+        <select
+          id="passengers"
+          value={passengers}
+          onChange={(e) => setPassengers(e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {[1, 2, 3, 4, 5, 6].map((num) => (
+            <option key={num} value={num}>
+              {num} {num === 1 ? "Passenger" : "Passengers"}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex items-end">
+        <Button type="submit" className="w-full">
+          Search Flights
+        </Button>
+      </div>
+    </form>
+  );
+}
