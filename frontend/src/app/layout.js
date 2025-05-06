@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />
-              <Toaster />
+              <Toaster visibleToasts={1} position="top-right" richColors />
             </div>
           </FlightProvider>
         </Suspense>
