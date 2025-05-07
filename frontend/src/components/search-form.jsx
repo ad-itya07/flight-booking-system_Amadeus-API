@@ -122,7 +122,7 @@ export function SearchForm({
 
     if (!from || !to || !date) return;
 
-    resetFlightViews(); // Reset flight views on search
+    // resetFlightViews(); // Reset flight views on search
     
     const formattedDate = formatDate(date);
 
