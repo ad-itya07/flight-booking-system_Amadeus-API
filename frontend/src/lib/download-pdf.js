@@ -248,7 +248,7 @@ export const handleDownloadPDF = async ({ booking }) => {
     pdf.setFont("helvetica", "normal");
     pdf.text("Base Fare:", margin + 5, yPos);
     pdf.text(
-      `INR ${booking.flight.price.toFixed(2) - (booking.flight.price * 0.18).toFixed(2)}`,
+      `INR ${(booking.flight.price - booking.flight.price * 0.18).toFixed(2)}`,
       pageWidth - margin - 5,
       yPos,
       { align: "right" }
