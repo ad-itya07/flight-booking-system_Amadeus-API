@@ -14,6 +14,7 @@ const FlightContext = createContext({
   wallet: 50000,
   getFlight: () => null,
   trackFlightView: () => {},
+  resetFlightViews: () => {},
   bookFlight: () => "",
   getBooking: () => null,
 });
@@ -148,6 +149,13 @@ export const FlightProvider = ({ children }) => {
     );
   };
 
+  const resetFlightViews = () => {
+    setFlightViews({});
+    setAllFlights((prev) =>
+      prev.map((flight) => ({ ...flight, priceMultiplier: 1 }))
+    );
+  };
+
   const bookFlight = async (flightId, passengers, from, to, journeyDate) => {
     const flight = getFlight(flightId);
     if (!flight) return "";
@@ -207,6 +215,7 @@ export const FlightProvider = ({ children }) => {
         wallet,
         getFlight,
         trackFlightView,
+        resetFlightViews,
         bookFlight,
         getBooking,
       }}
