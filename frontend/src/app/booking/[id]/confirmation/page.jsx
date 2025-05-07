@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +17,11 @@ import { useFlights } from "@/context/flight-context";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plane } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import domtoimage from "dom-to-image-more";
+import { jsPDF } from "jspdf";
 
 export default function ConfirmationPage() {
-  const params = useParams();
+  const bookingRef = useRef(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { getBooking } = useFlights();
@@ -38,6 +40,32 @@ export default function ConfirmationPage() {
 
   const handleViewAllBookings = () => {
     router.push("/bookings");
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!bookingRef.current) return;
+
+    const hiddenEls = document.querySelectorAll(".no-print");
+    hiddenEls.forEach((el) => (el.style.display = "none"));
+
+    try {
+      const dataUrl = await domtoimage.toPng(bookingRef.current);
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const img = new Image();
+      img.src = dataUrl;
+
+      img.onload = () => {
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (img.height * pdfWidth) / img.width;
+        pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`e-ticket-${booking._id.slice(-6).toUpperCase()}-${new Date().getTime()}.pdf`);
+      };
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
+    } finally {
+      hiddenEls.forEach((el) => (el).style.display = "");
+    }
   };
 
   if (loading) {
@@ -132,6 +160,7 @@ export default function ConfirmationPage() {
         </motion.div>
 
         <motion.div
+          ref={bookingRef}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -144,19 +173,33 @@ export default function ConfirmationPage() {
                     E-Ticket
                   </CardTitle>
                   <CardDescription className="text-base">
-                    Booking ID: {booking._id}
+                    Booking ID: {booking._id.slice(-6).toUpperCase()}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="group">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="group no-print"
+                    onClick={handleDownloadPDF}
+                  >
                     <Printer className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                     Print
                   </Button>
-                  <Button variant="outline" size="sm" className="group">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="group no-print"
+                    onClick={handleDownloadPDF}
+                  >
                     <Download className="h-4 w-4 mr-2 group-hover:translate-y-0.5 transition-transform" />
                     Download
                   </Button>
-                  <Button variant="outline" size="sm" className="group">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="group no-print"
+                  >
                     <Share2 className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
                     Share
                   </Button>
@@ -179,7 +222,9 @@ export default function ConfirmationPage() {
                         {booking.flight.departureTime}
                       </p>
                       <p className="text-sm text-gray-500">{booking.from}</p>
-                      <p className="text-xs text-gray-400">{formatDate(booking.journeyDate)}</p>
+                      <p className="text-xs text-gray-400">
+                        {formatDate(booking.journeyDate)}
+                      </p>
                     </div>
                     <div className="text-center px-4 mb-4 md:mb-0">
                       <p className="text-xs text-gray-500">
