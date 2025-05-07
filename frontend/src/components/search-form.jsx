@@ -21,6 +21,7 @@ import {
 import { CalendarIcon, Loader2, MapPin, Search } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { searchLocations } from "@/utils/amadeusAPI";
+import { useFlights } from "@/context/flight-context";
 
 export function SearchForm({
   compact = false,
@@ -29,6 +30,8 @@ export function SearchForm({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { resetFlightViews } = useFlights();
 
   const [fromQuery, setFromQuery] = useState(fromAirport);
   const [toQuery, setToQuery] = useState(toAirport);
@@ -119,6 +122,8 @@ export function SearchForm({
 
     if (!from || !to || !date) return;
 
+    resetFlightViews(); // Reset flight views on search
+    
     const formattedDate = formatDate(date);
 
     router.push(
@@ -182,7 +187,7 @@ export function SearchForm({
                         <CommandItem
                           key={airport.id}
                           onSelect={() => {
-                            setFrom(airport.name);
+                            setFrom(airport.address.cityName);
                             setFromQuery(airport.name);
                             setFromOpen(false);
                           }}
@@ -238,7 +243,7 @@ export function SearchForm({
                 </Button>
               </div>
               <CommandList>
-                {fromLoading ? (
+                {toLoading ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span className="ml-2">Searching airports...</span>
@@ -251,7 +256,7 @@ export function SearchForm({
                         <CommandItem
                           key={airport.id}
                           onSelect={() => {
-                            setTo(airport.name);
+                            setTo(airport.address.cityName);
                             setToQuery(airport.name);
                             setToOpen(false);
                           }}
