@@ -19,6 +19,7 @@ import { ArrowLeft, Plane } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import domtoimage from "dom-to-image-more";
 import { jsPDF } from "jspdf";
+import { handleDownloadPDF } from "@/lib/download-pdf";
 
 export default function ConfirmationPage() {
   const bookingRef = useRef(null);
@@ -42,30 +43,8 @@ export default function ConfirmationPage() {
     router.push("/bookings");
   };
 
-  const handleDownloadPDF = async () => {
-    if (!bookingRef.current) return;
-
-    const hiddenEls = document.querySelectorAll(".no-print");
-    hiddenEls.forEach((el) => (el.style.display = "none"));
-
-    try {
-      const dataUrl = await domtoimage.toPng(bookingRef.current);
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      const img = new Image();
-      img.src = dataUrl;
-
-      img.onload = () => {
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (img.height * pdfWidth) / img.width;
-        pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`e-ticket-${booking._id.slice(-6).toUpperCase()}-${new Date().getTime()}.pdf`);
-      };
-    } catch (err) {
-      console.error("Failed to generate PDF", err);
-    } finally {
-      hiddenEls.forEach((el) => (el).style.display = "");
-    }
+  const downloadPDF = async () => {
+    handleDownloadPDF({ booking });
   };
 
   if (loading) {
@@ -181,7 +160,7 @@ export default function ConfirmationPage() {
                     variant="outline"
                     size="sm"
                     className="group no-print"
-                    onClick={handleDownloadPDF}
+                    onClick={downloadPDF}
                   >
                     <Printer className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                     Print
@@ -190,7 +169,7 @@ export default function ConfirmationPage() {
                     variant="outline"
                     size="sm"
                     className="group no-print"
-                    onClick={handleDownloadPDF}
+                    onClick={downloadPDF}
                   >
                     <Download className="h-4 w-4 mr-2 group-hover:translate-y-0.5 transition-transform" />
                     Download
