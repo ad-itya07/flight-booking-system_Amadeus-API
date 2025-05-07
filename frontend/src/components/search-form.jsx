@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +15,18 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
 import { CalendarIcon, Loader2, MapPin, Search } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { searchLocations } from "@/utils/amadeusAPI";
-import { countries } from "@/lib/countries-data";
 
-export function SearchForm({ compact = false, fromAirport = "", toAirport= "" }) {
+export function SearchForm({
+  compact = false,
+  fromAirport = "",
+  toAirport = "",
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -47,9 +49,6 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const [countryCode, setCountryCode] = useState("IN");
-  const [countryOpen, setCountryOpen] = useState(false);
-
   const handleFromAirportSearch = async () => {
     if (fromQuery.length < 2) {
       setFromAirports([]);
@@ -60,7 +59,6 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
     try {
       const airports = await searchLocations({
         keyword: fromQuery,
-        countryCode,
       });
       setFromAirports(airports.data);
     } catch (error) {
@@ -69,6 +67,32 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
       setFromLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (fromQuery.length < 2) {
+      setFromAirports([]);
+      return;
+    }
+
+    const delayDebounce = setTimeout(() => {
+      handleFromAirportSearch();
+    }, 400); // Adjust delay here (ms)
+
+    return () => clearTimeout(delayDebounce);
+  }, [fromQuery]);
+
+  useEffect(() => {
+    if (toQuery.length < 2) {
+      setToAirports([]);
+      return;
+    }
+
+    const delayDebounce = setTimeout(() => {
+      handleToAirportSearch();
+    }, 400); // Adjust delay here (ms)
+
+    return () => clearTimeout(delayDebounce);
+  }, [toQuery]);
 
   const handleToAirportSearch = async () => {
     if (toQuery.length < 2) {
@@ -80,7 +104,6 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
     try {
       const airports = await searchLocations({
         keyword: toQuery,
-        countryCode,
       });
       setToAirports(airports.data);
     } catch (error) {
@@ -90,8 +113,7 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
     }
   };
 
-  console.log(date, "date");
-  
+
   const handleSearch = (e) => {
     e.preventDefault();
 
@@ -114,62 +136,6 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
           : "grid-cols-1 md:grid-cols-2 lg:grid-cols-5"
       )}
     >
-      <div className="space-y-2">
-        <Label htmlFor="country">Country</Label>
-        <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={countryOpen}
-              className="w-full justify-between"
-            >
-              {countryCode
-                ? `${countryCode} - ${
-                    countries.find((c) => c.code === countryCode)?.name || ""
-                  }`
-                : "Select country..."}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="ml-2 h-4 w-4 shrink-0 opacity-50"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0">
-            <Command>
-              <CommandInput placeholder="Search country..." />
-              <CommandList>
-                <CommandEmpty>No country found.</CommandEmpty>
-                <CommandGroup>
-                  {countries.map((country) => (
-                    <CommandItem
-                      key={country.code}
-                      value={country.code}
-                      onSelect={(currentValue) => {
-                        setCountryCode(currentValue);
-                        setCountryOpen(false);
-                      }}
-                    >
-                      {country.code} - {country.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
       <div
         className={cn(
           "space-y-2",
@@ -194,7 +160,7 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
             <Command>
               <div className="flex items-center justify-between p-2 gap-2">
                 <Input
-                  placeholder="Search city..."
+                  placeholder="Search city or airport..."
                   value={fromQuery}
                   onChange={(e) => setFromQuery(e.target.value)}
                 />
@@ -222,7 +188,7 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
                           }}
                         >
                           <div className="flex flex-col">
-                            <span>{airport.name}</span>
+                            <span>{airport.name} AIRPORT</span>
                             <span className="text-xs text-gray-500">
                               {airport.address.cityName},{" "}
                               {airport.address.stateCode}
@@ -251,7 +217,7 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
             <div className="relative">
               <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                id="to"
+                id="from"
                 placeholder="City or Airport"
                 value={toQuery}
                 onChange={(e) => setToQuery(e.target.value)}
@@ -263,7 +229,7 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
             <Command>
               <div className="flex items-center justify-between p-2 gap-2">
                 <Input
-                  placeholder="Search city..."
+                  placeholder="Search city or airport..."
                   value={toQuery}
                   onChange={(e) => setToQuery(e.target.value)}
                 />
@@ -272,7 +238,7 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
                 </Button>
               </div>
               <CommandList>
-                {toLoading ? (
+                {fromLoading ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span className="ml-2">Searching airports...</span>
@@ -291,9 +257,10 @@ export function SearchForm({ compact = false, fromAirport = "", toAirport= "" })
                           }}
                         >
                           <div className="flex flex-col">
-                            <span>{airport.name}</span>
+                            <span>{airport.name} AIRPORT</span>
                             <span className="text-xs text-gray-500">
-                              {airport.address.cityName}, {airport.address.stateCode}
+                              {airport.address.cityName},{" "}
+                              {airport.address.stateCode}
                             </span>
                           </div>
                         </CommandItem>
