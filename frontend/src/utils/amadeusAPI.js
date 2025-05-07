@@ -1,7 +1,7 @@
 const AMADEUS_TOKEN_URL =
   "https://test.api.amadeus.com/v1/security/oauth2/token";
 const AMADEUS_SEARCH_URL =
-  "https://test.api.amadeus.com/v1/reference-data/locations?subType=CITY";
+  "https://test.api.amadeus.com/v1/reference-data/locations";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID;
 const CLIENT_SECRET = process.env.NEXT_PUBLIC_CLIENT_SECRET;
@@ -44,16 +44,16 @@ const fetchNewToken = async () => {
   return data.access_token;
 };
 
-export const searchLocations = async ({ keyword, countryCode }) => {
+export const searchLocations = async ({ keyword }) => {
   try {
     let token = getStoredToken();
     if (!token) {
       token = await fetchNewToken();
     }
 
-    const url = `${AMADEUS_SEARCH_URL}&keyword=${encodeURIComponent(
+    const url = `${AMADEUS_SEARCH_URL}?subType=AIRPORT&keyword=${encodeURIComponent(
       keyword
-    )}&countryCode=${encodeURIComponent(countryCode)}`;
+    )}`;
 
     const res = await fetch(url, {
       headers: {
@@ -65,7 +65,7 @@ export const searchLocations = async ({ keyword, countryCode }) => {
       // If unauthorized, token may have expired
       if (res.status === 401) {
         token = await fetchNewToken();
-        return await searchLocations({ keyword, countryCode }); // Retry once
+        return await searchLocations({ keyword }); // Retry once
       }
       throw new Error("Failed to fetch locations");
     }
